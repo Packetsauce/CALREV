@@ -10,12 +10,15 @@
             font-family: Arial, sans-serif;
             background-color: #1e1e1e;
             color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
         }
         #landing-page, #main-content {
             display: none;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            height: 100%;
         }
         #landing-page {
             display: flex;
@@ -49,6 +52,9 @@
             overflow-y: auto;
             box-sizing: border-box;
             transition: 0.3s;
+            left: 0;
+            top: 0;
+            z-index: 1000;
         }
         #output-panel {
             margin-left: 350px;
@@ -56,6 +62,8 @@
             width: calc(100% - 350px);
             transition: margin-left 0.3s, width 0.3s;
             overflow-y: auto;
+            height: 100vh;
+            background: #1e1e1e;
         }
         #close-btn {
             position: absolute;
@@ -63,6 +71,7 @@
             right: 10px;
             font-size: 20px;
             cursor: pointer;
+            color: white;
         }
         .form-group {
             margin-bottom: 15px;
@@ -263,12 +272,10 @@
                 return priorityOrder[a.priority] - priorityOrder[b.priority];
             });
 
-            const startTime = document.getElementById('start-time').value;
-            const endTime = document.getElementById('end-time').value;
-            const startHour = parseInt(startTime.split(':')[0]);
-            const endHour = parseInt(endTime.split(':')[0]);
-
+            const startHour = 8; // 8 AM
+            const endHour = 22; // 10 PM
             const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
             weekDays.forEach(day => {
                 const dayDiv = document.createElement('div');
                 dayDiv.className = 'day';
@@ -310,7 +317,6 @@
             activities = [];
             document.getElementById('activities').innerHTML = '';
             document.getElementById('calendar').innerHTML = '';
-            alert('All activities cleared!');
         }
 
         function toggleInputPanel() {
@@ -337,10 +343,14 @@
         function generateRandomColor() {
             const letters = '0123456789ABCDEF';
             let color = '#';
-            for (let i = 0; i < 6; i++) {
-                color += letters[Math.floor(Math.random() * 16)];
-            }
-            return color;
+            do {
+                color = '#';
+                for (let i = 0; i < 6; i++) {
+                    color += letters[Math.floor(Math.random() * 16)];
+                }
+            } while (color === '#000000' || color === '#FFFFFF' || color.match(/^#(808080|888888|999999|AAAAAA|BBBBBB|CCCCCC|DDDDDD|EEEEEE|F0F0F0|F5F5F5|FAFAFA|FFFFFF)$/));
+
+            return color + 'AA'; // Add some transparency
         }
     </script>
 </body>

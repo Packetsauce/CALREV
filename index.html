@@ -149,6 +149,24 @@
         #minimize-button:hover {
             background-color: #0056b3;
         }
+        #settings-panel {
+            margin-top: 20px;
+        }
+        #settings-panel .form-group {
+            margin-bottom: 15px;
+        }
+        #settings-panel .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        #settings-panel .form-group input, #settings-panel .form-group select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
     </style>
 </head>
 <body>
@@ -200,11 +218,31 @@
                 <h3>Entered Activities</h3>
                 <ul id="activities"></ul>
             </div>
-            <div class="form-group">
-                <button onclick="generateCalendar()">Generate Calendar</button>
-            </div>
-            <div class="form-group">
-                <button onclick="clearActivities()">Clear Activities</button>
+            <div id="settings-panel">
+                <h3>Settings</h3>
+                <div class="form-group">
+                    <label for="break-time">Break Time Between Activities (minutes):</label>
+                    <input type="number" id="break-time" min="0" max="120" value="60"/>
+                </div>
+                <div class="form-group">
+                    <button onclick="toggleLunchSettings()">Lunch Settings ▼</button>
+                    <div id="lunch-settings" style="display:none; margin-top: 10px;">
+                        <div class="form-group">
+                            <label for="lunch-time">Lunch Time:</label>
+                            <input type="time" id="lunch-time" />
+                        </div>
+                        <div class="form-group">
+                            <label for="lunch-duration">Lunch Duration (minutes):</label>
+                            <input type="number" id="lunch-duration" min="0" max="120" value="60"/>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <button onclick="generateCalendar()">Generate Calendar</button>
+                </div>
+                <div class="form-group">
+                    <button onclick="clearActivities()">Clear Activities</button>
+                </div>
             </div>
         </div>
         <button id="minimize-button" onclick="toggleInputPanel()">Input Activities</button>
@@ -225,25 +263,14 @@
         function addActivity() {
             const name = document.getElementById('activity-name').value;
             const priority = document.getElementById('activity-priority').value;
-            const hours = document.getElementById('activity-hours').value;
+            const hours = parseFloat(document.getElementById('activity-hours').value);
             const weekend = document.getElementById('weekend-time').value === 'yes';
-            const startTime = document.getElementById('start-time').value;
-            const endTime = document.getElementById('end-time').value;
 
-            if (name && priority && hours && startTime && endTime) {
-                const activity = {
-                    name,
-                    priority,
-                    hours: parseInt(hours),
-                    weekend,
-                    startTime,
-                    endTime,
-                    color: generateRandomColor()
-                };
+            if (name && !isNaN(hours)) {
+                const activity = { name, priority, hours, weekend, color: generateRandomColor() };
                 activities.push(activity);
                 displayActivities();
-            } else {
-                alert('Please fill all fields.');
+                clearActivityInputs();
             }
         }
 
@@ -251,11 +278,18 @@
             const activitiesList = document.getElementById('activities');
             activitiesList.innerHTML = '';
             activities.forEach((activity, index) => {
-                const li = document.createElement('li');
-                li.innerHTML = `${activity.name} (${activity.priority} priority, ${activity.hours} hrs/week)
-                    <button onclick="removeActivity(${index})">Remove</button>`;
-                activitiesList.appendChild(li);
+                const activityItem = document.createElement('li');
+                activityItem.innerHTML = `
+                    ${activity.name} - ${activity.priority} Priority - ${activity.hours} hrs/week
+                    <button onclick="removeActivity(${index})">Remove</button>
+                `;
+                activitiesList.appendChild(activityItem);
             });
+        }
+
+        function clearActivityInputs() {
+            document.getElementById('activity-name').value = '';
+            document.getElementById('activity-hours').value = '';
         }
 
         function removeActivity(index) {
@@ -263,24 +297,38 @@
             displayActivities();
         }
 
+        function toggleLunchSettings() {
+            const lunchSettings = document.getElementById('lunch-settings');
+            lunchSettings.style.display = lunchSettings.style.display === 'none' ? 'block' : 'none';
+        }
+
         function generateCalendar() {
             const calendar = document.getElementById('calendar');
             calendar.innerHTML = '';
 
-            activities.sort((a, b) => {
-                const priorityOrder = { 'very-high': 1, 'high': 2, 'medium': 3, 'low': 4, 'very-low': 5 };
-                return priorityOrder[a.priority] - priorityOrder[b.priority];
-            });
-
-            const startHour = 8; // 8 AM
-            const endHour = 22; // 10 PM
+            const startTime = parseInt(document.getElementById('start-time').value.split(':')[0]);
+            const endTime = parseInt(document.getElementById('end-time').value.split(':')[0]);
+            const breakTime = parseFloat(document.getElementById('break-time').value) / 60; // Convert minutes to hours
+            const lunchTime = parseInt(document.getElementById('lunch-time').value.split(':')[0]);
+            const lunchDuration = parseFloat(document.getElementById('lunch-duration').value) / 60; // Convert minutes to hours
             const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
             weekDays.forEach(day => {
                 const dayDiv = document.createElement('div');
                 dayDiv.className = 'day';
                 dayDiv.innerHTML = `<h3>${day}</h3>`;
-                let currentTime = startHour;
+                let currentTime = startTime;
+
+                if (day !== 'Saturday' && day !== 'Sunday') {
+                    // Add lunch break
+                    if (lunchTime >= startTime && lunchTime + lunchDuration <= endTime) {
+                        const lunchDiv = document.createElement('div');
+                        lunchDiv.className = 'activity';
+                        lunchDiv.style.backgroundColor = '#FFD700'; // Gold color for lunch
+                        lunchDiv.innerHTML = `Lunch (${lunchDuration * 60} mins)<br><small>${formatTime(lunchTime)} - ${formatTime(lunchTime + lunchDuration)}</small>`;
+                        dayDiv.appendChild(lunchDiv);
+                    }
+                }
 
                 activities.forEach(activity => {
                     if (activity.weekend || (!activity.weekend && day !== 'Saturday' && day !== 'Sunday')) {
@@ -288,17 +336,17 @@
                         const activityStartHour = currentTime;
                         const activityEndHour = currentTime + dailyHours;
 
-                        if (activityEndHour > endHour) {
+                        if (activityEndHour > endTime) {
                             return;
                         }
 
-                        currentTime = activityEndHour + 1; // 1-hour break between activities
+                        currentTime = activityEndHour + breakTime;
 
                         const activityDiv = document.createElement('div');
                         activityDiv.className = 'activity';
                         activityDiv.style.backgroundColor = activity.color;
                         const activityTime = `${formatTime(activityStartHour)} - ${formatTime(activityEndHour)}`;
-                        activityDiv.innerHTML = `${activity.name} (${dailyHours.toFixed(0)} hrs)<br><small>${activityTime}</small>`;
+                        activityDiv.innerHTML = `${activity.name} (${dailyHours.toFixed(1)} hrs)<br><small>${activityTime}</small>`;
 
                         dayDiv.appendChild(activityDiv);
                     }

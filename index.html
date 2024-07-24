@@ -136,6 +136,13 @@
             margin: 5px;
             background: var(--activity-color);
             border-radius: 5px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .time-slot {
+            display: flex;
+            flex-direction: column;
         }
 
         .activity {
@@ -145,6 +152,10 @@
             color: white;
             border-radius: 5px;
             background-color: var(--primary-color);
+        }
+
+        .activity.lunch {
+            background-color: var(--lunch-color);
         }
 
         #activities-list {
@@ -317,7 +328,7 @@
 
             var activityList = document.getElementById('activities');
             var listItem = document.createElement('li');
-            listItem.textContent = `${activityName} - Priority: ${activityPriority}, Hours: ${activityHours}, Weekend: ${weekendTime}`;
+            listItem.textContent = `${activityName}`;
             activityList.appendChild(listItem);
 
             // Clear input fields
@@ -357,13 +368,15 @@
                 var dayDiv = document.createElement('div');
                 dayDiv.className = 'day';
                 dayDiv.innerHTML = `<h3>${day}</h3>`;
+                dayDiv.dataset.day = day;
                 calendar.appendChild(dayDiv);
             });
 
-            // Get total hours available per day
+            // Get total hours available per week
             var startHour = parseInt(dayStart.split(':')[0]);
             var endHour = parseInt(dayEnd.split(':')[0]);
-            var availableHoursPerDay = endHour - startHour - (breakTime / 60) - (lunchDuration / 60);
+            var totalHoursPerDay = endHour - startHour - (breakTime / 60) - (lunchDuration / 60);
+            var totalHoursPerWeek = totalHoursPerDay * 7;
 
             // Get activity list
             var activityList = Array.from(document.getElementById('activities').children);
@@ -371,10 +384,10 @@
                 var text = item.textContent;
                 var parts = text.split(', ');
                 return {
-                    name: parts[0].split(' - ')[0],
-                    priority: parts[0].split(' - ')[1].split(': ')[1],
-                    hours: parseInt(parts[1].split(': ')[1]),
-                    weekend: parts[2].split(': ')[1] === 'yes'
+                    name: parts[0],
+                    priority: document.getElementById('activity-priority').value,
+                    hours: parseInt(document.getElementById('activity-hours').value),
+                    weekend: document.getElementById('weekend-time').value === 'yes'
                 };
             });
 
@@ -385,6 +398,7 @@
             // Distribute activities over the week
             activities.forEach(activity => {
                 var hoursRemaining = activity.hours;
+                var hoursPerDay = (hoursRemaining / totalHoursPerWeek) * totalHoursPerDay;
                 for (var i = 0; i < daysOfWeek.length; i++) {
                     if (!activity.weekend && weekendDays.includes(daysOfWeek[i])) {
                         continue;
@@ -393,11 +407,14 @@
                         break;
                     }
                     var dayDiv = calendar.children[i];
-                    var activityDiv = document.createElement('div');
-                    activityDiv.className = 'activity';
-                    var hoursAllocated = Math.min(hoursRemaining, availableHoursPerDay);
-                    activityDiv.textContent = `${activity.name} (${hoursAllocated} hrs)`;
-                    dayDiv.appendChild(activityDiv);
+                    var timeSlotDiv = document.createElement('div');
+                    timeSlotDiv.className = 'time-slot';
+                    var hoursAllocated = Math.min(hoursRemaining, hoursPerDay);
+                    var startHourSlot = startHour + (totalHoursPerDay - hoursPerDay) * (i / 7);
+                    var endHourSlot = startHourSlot + hoursAllocated;
+                    timeSlotDiv.innerHTML = `<div class="activity">${activity.name} (${hoursAllocated} hrs)</div>`;
+                    timeSlotDiv.innerHTML += `<div class="activity">${startHourSlot}:00 - ${endHourSlot}:00</div>`;
+                    dayDiv.appendChild(timeSlotDiv);
                     hoursRemaining -= hoursAllocated;
                 }
             });
@@ -409,8 +426,7 @@
                 for (var i = 0; i < daysOfWeek.length; i++) {
                     var dayDiv = calendar.children[i];
                     var lunchDiv = document.createElement('div');
-                    lunchDiv.className = 'activity';
-                    lunchDiv.style.backgroundColor = 'var(--lunch-color)';
+                    lunchDiv.className = 'activity lunch';
                     lunchDiv.textContent = `Lunch (${lunchStartHour}:00 - ${lunchEndHour}:00)`;
                     dayDiv.appendChild(lunchDiv);
                 }

@@ -125,17 +125,15 @@
         }
 
         #calendar {
-            display: flex;
-            justify-content: space-between;
-            overflow-x: auto;
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
         }
 
         .day {
             border: 1px solid var(--border-color);
             padding: 10px;
             margin: 5px;
-            min-width: 150px;
-            flex: 1;
             background: var(--activity-color);
             border-radius: 5px;
         }
@@ -216,6 +214,15 @@
     <div id="main-content">
         <div id="input-panel">
             <span id="close-btn" onclick="toggleInputPanel()">×</span>
+            <h2>Day Settings</h2>
+            <div class="form-group">
+                <label for="day-start">Day Start Time:</label>
+                <input type="time" id="day-start" />
+            </div>
+            <div class="form-group">
+                <label for="day-end">Day End Time:</label>
+                <input type="time" id="day-end" />
+            </div>
             <h2>Input Activities</h2>
             <div class="form-group">
                 <label for="activity-name">Activity Name:</label>
@@ -243,14 +250,6 @@
                 </select>
             </div>
             <div class="form-group">
-                <label for="start-time">Start Time of Day:</label>
-                <input type="time" id="start-time" />
-            </div>
-            <div class="form-group">
-                <label for="end-time">End Time of Day:</label>
-                <input type="time" id="end-time" />
-            </div>
-            <div class="form-group">
                 <button onclick="addActivity()">Add Activity</button>
             </div>
             <div id="activities-list">
@@ -273,17 +272,20 @@
                 </div>
                 <div class="form-group">
                     <button onclick="generateCalendar()">Generate Calendar</button>
-                    <button onclick="clearActivities()">Clear Activities</button>
                 </div>
+            </div>
+            <div class="form-group">
+                <button onclick="clearActivities()">Clear Activities</button>
             </div>
         </div>
         <div id="output-panel">
             <div id="calendar"></div>
         </div>
-        <button id="minimize-button" onclick="toggleInputPanel()">☰</button>
     </div>
+    <button id="minimize-button" onclick="toggleInputPanel()">☰</button>
+
     <script>
-        // Function to show the main content and hide the landing page
+        // Show main content and hide the landing page
         function showMainContent() {
             document.getElementById('landing-page').style.display = 'none';
             document.getElementById('main-content').style.display = 'flex';
@@ -312,12 +314,10 @@
             var activityPriority = document.getElementById('activity-priority').value;
             var activityHours = document.getElementById('activity-hours').value;
             var weekendTime = document.getElementById('weekend-time').value;
-            var startTime = document.getElementById('start-time').value;
-            var endTime = document.getElementById('end-time').value;
 
             var activityList = document.getElementById('activities');
             var listItem = document.createElement('li');
-            listItem.textContent = `${activityName} - Priority: ${activityPriority}, Hours: ${activityHours}, Weekend: ${weekendTime}, Start: ${startTime}, End: ${endTime}`;
+            listItem.textContent = `${activityName} - Priority: ${activityPriority}, Hours: ${activityHours}, Weekend: ${weekendTime}`;
             activityList.appendChild(listItem);
 
             // Clear input fields
@@ -325,8 +325,6 @@
             document.getElementById('activity-priority').value = 'very-high';
             document.getElementById('activity-hours').value = '';
             document.getElementById('weekend-time').value = 'yes';
-            document.getElementById('start-time').value = '';
-            document.getElementById('end-time').value = '';
         }
 
         function clearActivities() {
@@ -334,22 +332,88 @@
         }
 
         function generateCalendar() {
+            // Get day start and end times
+            var dayStart = document.getElementById('day-start').value;
+            var dayEnd = document.getElementById('day-end').value;
+            var breakTime = parseInt(document.getElementById('break-time').value) || 0;
+            var lunchTime = document.getElementById('lunch-time').value;
+            var lunchDuration = parseInt(document.getElementById('lunch-duration').value) || 0;
+
+            if (!dayStart || !dayEnd) {
+                alert('Please set the day start and end times.');
+                return;
+            }
+
             // Clear existing calendar
             var calendar = document.getElementById('calendar');
             calendar.innerHTML = '';
 
-            // Generate new calendar based on activities
-            var activityList = document.getElementById('activities').children;
-            for (var i = 0; i < activityList.length; i++) {
+            // Define days of the week
+            var daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+            var weekendDays = ['Saturday', 'Sunday'];
+
+            // Generate calendar grid
+            daysOfWeek.forEach(day => {
                 var dayDiv = document.createElement('div');
                 dayDiv.className = 'day';
-                dayDiv.textContent = `Day ${i + 1}`;
+                dayDiv.innerHTML = `<h3>${day}</h3>`;
                 calendar.appendChild(dayDiv);
+            });
 
-                var activityDiv = document.createElement('div');
-                activityDiv.className = 'activity';
-                activityDiv.textContent = activityList[i].textContent;
-                dayDiv.appendChild(activityDiv);
+            // Get total hours available per day
+            var startHour = parseInt(dayStart.split(':')[0]);
+            var endHour = parseInt(dayEnd.split(':')[0]);
+            var availableHoursPerDay = endHour - startHour - (breakTime / 60) - (lunchDuration / 60);
+
+            // Get activity list
+            var activityList = Array.from(document.getElementById('activities').children);
+            var activities = activityList.map(item => {
+                var text = item.textContent;
+                var parts = text.split(', ');
+                return {
+                    name: parts[0].split(' - ')[0],
+                    priority: parts[0].split(' - ')[1].split(': ')[1],
+                    hours: parseInt(parts[1].split(': ')[1]),
+                    weekend: parts[2].split(': ')[1] === 'yes'
+                };
+            });
+
+            // Sort activities by priority
+            var priorityMap = { 'very-high': 1, 'high': 2, 'medium': 3, 'low': 4, 'very-low': 5 };
+            activities.sort((a, b) => priorityMap[a.priority] - priorityMap[b.priority]);
+
+            // Distribute activities over the week
+            activities.forEach(activity => {
+                var hoursRemaining = activity.hours;
+                for (var i = 0; i < daysOfWeek.length; i++) {
+                    if (!activity.weekend && weekendDays.includes(daysOfWeek[i])) {
+                        continue;
+                    }
+                    if (hoursRemaining <= 0) {
+                        break;
+                    }
+                    var dayDiv = calendar.children[i];
+                    var activityDiv = document.createElement('div');
+                    activityDiv.className = 'activity';
+                    var hoursAllocated = Math.min(hoursRemaining, availableHoursPerDay);
+                    activityDiv.textContent = `${activity.name} (${hoursAllocated} hrs)`;
+                    dayDiv.appendChild(activityDiv);
+                    hoursRemaining -= hoursAllocated;
+                }
+            });
+
+            // Add lunch break
+            if (lunchTime) {
+                var lunchStartHour = parseInt(lunchTime.split(':')[0]);
+                var lunchEndHour = lunchStartHour + lunchDuration / 60;
+                for (var i = 0; i < daysOfWeek.length; i++) {
+                    var dayDiv = calendar.children[i];
+                    var lunchDiv = document.createElement('div');
+                    lunchDiv.className = 'activity';
+                    lunchDiv.style.backgroundColor = 'var(--lunch-color)';
+                    lunchDiv.textContent = `Lunch (${lunchStartHour}:00 - ${lunchEndHour}:00)`;
+                    dayDiv.appendChild(lunchDiv);
+                }
             }
         }
     </script>

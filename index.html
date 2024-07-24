@@ -283,7 +283,75 @@
         <button id="minimize-button" onclick="toggleInputPanel()">☰</button>
     </div>
     <script>
-        // JavaScript remains largely the same as provided in the previous response.
+        // Function to show the main content and hide the landing page
+        function showMainContent() {
+            document.getElementById('landing-page').style.display = 'none';
+            document.getElementById('main-content').style.display = 'flex';
+        }
+
+        function toggleInputPanel() {
+            var inputPanel = document.getElementById('input-panel');
+            var outputPanel = document.getElementById('output-panel');
+            var minimizeButton = document.getElementById('minimize-button');
+
+            if (inputPanel.style.display === 'none') {
+                inputPanel.style.display = 'block';
+                outputPanel.style.marginLeft = '350px';
+                outputPanel.style.width = 'calc(100% - 350px)';
+                minimizeButton.style.display = 'none';
+            } else {
+                inputPanel.style.display = 'none';
+                outputPanel.style.marginLeft = '0';
+                outputPanel.style.width = '100%';
+                minimizeButton.style.display = 'block';
+            }
+        }
+
+        function addActivity() {
+            var activityName = document.getElementById('activity-name').value;
+            var activityPriority = document.getElementById('activity-priority').value;
+            var activityHours = document.getElementById('activity-hours').value;
+            var weekendTime = document.getElementById('weekend-time').value;
+            var startTime = document.getElementById('start-time').value;
+            var endTime = document.getElementById('end-time').value;
+
+            var activityList = document.getElementById('activities');
+            var listItem = document.createElement('li');
+            listItem.textContent = `${activityName} - Priority: ${activityPriority}, Hours: ${activityHours}, Weekend: ${weekendTime}, Start: ${startTime}, End: ${endTime}`;
+            activityList.appendChild(listItem);
+
+            // Clear input fields
+            document.getElementById('activity-name').value = '';
+            document.getElementById('activity-priority').value = 'very-high';
+            document.getElementById('activity-hours').value = '';
+            document.getElementById('weekend-time').value = 'yes';
+            document.getElementById('start-time').value = '';
+            document.getElementById('end-time').value = '';
+        }
+
+        function clearActivities() {
+            document.getElementById('activities').innerHTML = '';
+        }
+
+        function generateCalendar() {
+            // Clear existing calendar
+            var calendar = document.getElementById('calendar');
+            calendar.innerHTML = '';
+
+            // Generate new calendar based on activities
+            var activityList = document.getElementById('activities').children;
+            for (var i = 0; i < activityList.length; i++) {
+                var dayDiv = document.createElement('div');
+                dayDiv.className = 'day';
+                dayDiv.textContent = `Day ${i + 1}`;
+                calendar.appendChild(dayDiv);
+
+                var activityDiv = document.createElement('div');
+                activityDiv.className = 'activity';
+                activityDiv.textContent = activityList[i].textContent;
+                dayDiv.appendChild(activityDiv);
+            }
+        }
     </script>
 </body>
 </html>
